@@ -1,0 +1,56 @@
+-*-outline-*-
+
+* Works w/ BDB 4.3.x only!  4.4 too new.
+
+* DBT     database thang,
+
+
+* return 0, else -> error
+** All of the possible special error values are less than 0.                          
+DB->err and [7]DB->errx
+
+
+
+
+* why use environment:
+
+        
+** db-env-create
+** env-add-path     ??
+** null-env
+** db-env-close
+
+
+* transactions .... i want them wrapped in the <db> object
+Is that possible? 
+
+* DB
+
+
+
+
+
+*  functions exported to BDB:
+           All values returned by Berkeley DB functions are less than 0 in order to avoid           
+           conflict with possible values of errno. Specifically, Berkeley DB reserves all values    
+           from -30,800 to -30,999 to itself as possible error values. There are a few Berkeley     
+           DB interfaces where it is possible for an application function to be called by a         
+           Berkeley DB function and subsequently fail with an application-specific return. Such     
+           failure returns will be passed back to the function that originally called a Berkeley    
+           DB interface. To avoid ambiguity about the cause of the error, error values separate     
+           from the Berkeley DB error name space should be used. 
+file:////usr/share/doc/db-4.2.52_p2/html/ref/program/errorret.html
+
+
+
+* 2. When using the non-cursor Berkeley DB calls to retrieve key/data items (for example,         
+       DB->get), the memory to which the pointer stored into the Dbt refers is valid only until     
+       the next call using the DB handle returned by DB->open. This includes any use of the         
+       returned DB handle, including by another thread within the process.                          
+                                                                                                    
+       For this reason, if the DB_THREAD handle was specified to the DB->open method, either        
+       DB_DBT_MALLOC, DB_DBT_REALLOC, or DB_DBT_USERMEM must be specified in the DBT when           
+       performing any non-cursor key or data retrieval.                                             
+
+
+       

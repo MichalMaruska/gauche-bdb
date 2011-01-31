@@ -1,0 +1,1182 @@
+
+;;fixme: revise DBT handling (memory allocation)
+;; flags
+
+
+;;; `header' files:
+"#include \"bdb-lib.h\""
+"#define UNUSED(obj) (void)obj"
+
+(include "types.genstub")
+
+
+;;; `Library-global' 
+(define-cproc db-version()
+  "int minor;
+int major;
+int patch;
+char *name = db_version(&major, &minor, &patch);
+
+return Scm_Values4(SCM_MAKE_STR(name),
+                   Scm_MakeInteger(major),
+                   Scm_MakeInteger(minor),
+                   Scm_MakeInteger(patch));")
+
+;;; `environment'
+;;;
+(define-type <db-env> "DB_ENV*" "DB environment .... global options for more db files/databases"
+  #f ; "SCM_DB_ENV_P"
+  "SCM_DB_ENV"
+  "new_db_env")
+
+
+(define-cclass <db-env> "ScmDbEnv*" "ScmDBE_class" ()
+  ((flags :type <int>
+          :setter #f
+          :getter
+          "u_int32_t flags;
+obj->get_flags(obj, &flags);
+SCM_RETURN(Scm_MakeInteger(flags));")
+
+   (data-dir :type <string>
+
+             ;; note: this accumulates!
+             :setter "
+const char* temp;
+temp = Scm_GetStringConst(SCM_STRING(value));
+obj->set_data_dir(obj, temp);"
+
+             :getter
+             "const char** dirs;
+int status = obj->get_data_dirs(obj, &dirs);
+if (status)
+    obj->err(obj, status, \"get_data_dirs:\"); 
+
+ ScmObj h = SCM_NIL, t = SCM_NIL;
+    while (dirs && *dirs) {
+      SCM_APPEND1(h, t, SCM_MAKE_STR_COPYING(*dirs));  /* fixme! */
+      dirs++;
+    }
+SCM_RETURN(h);")
+
+   ;; temporary directory
+   (temp :type <string>
+         :setter "
+const char* temp;
+temp = Scm_GetStringConst(SCM_STRING(value));
+obj->set_tmp_dir(obj, temp);"
+         :getter "const char* temp;
+int status = obj->get_tmp_dir(obj, &temp);
+/* ??? */
+if (status)
+    obj->err(obj, status, \"get_tmp_dir:\");
+if(!temp)
+   return SCM_FALSE;
+SCM_RETURN(SCM_MAKE_STR_IMMUTABLE(temp)) ;")  ; fixme: better to copy it?
+   )
+  (printer (c "dbe_print"))
+  )
+
+
+(define-constant null-env (c "new_db_env(NULL)"))
+
+
+;;; Basic functions on the `Environment':
+(define-cproc db-env-create (flags::<int>)
+  ;; the bdb library uses arguments/pointers for return values. So these are not `simple'
+  ;; functions: so we cannot
+  (return  "mmc_db_env_create"))
+
+
+;; fixme:  add?
+(define-cproc db-env-add-path (env::<db-env> dir::<const-char*>)
+  "int status = env->set_data_dir(env, dir);
+CHECK_SENV(env_scm);
+if (status)
+    env->err(env, status, \"set_data_dir: %s\", dir);
+SCM_RETURN(SCM_UNDEFINED);
+")
+
+
+
+;;  bad_connection-> error
+;; fixme:
+;(define-enum DB_CLIENT)
+
+(define-enum DB_RUNRECOVERY)
+
+;;; 'pseudo'-methods
+(define-cproc db-env-close (env::<db-env> flags::<int>)
+"CHECK_SENV(env_scm);
+int res = env->close(env, flags);
+
+SCM_DB_ENV(env_scm) = NULL;  /* fixme! what if ->close failed but should be retried for example? */
+SCM_RETURN(Scm_MakeInteger(res));")
+
+
+
+;;; `Transactions'
+; "SCM_CLASS_DECL(ScmDBTXN_class);" 
+(define-type  <db-txn> "DB_TXN*" "box for the berkDB transaction"
+  "SCM_DB_TXN_P"
+  "SCM_DB_TXN"
+  "SCM_MAKE_DB_TXN")
+
+
+(define-cclass <db-txn> "ScmDbTxn*"
+  "ScmDBTXN_class"
+  ()
+  ()
+  (printer (c "dbtxn_print")))
+
+
+(define-constant null-transaction (c "new_db_txn(NULL)"))
+
+
+(define-cproc txn-begin (env::<db-env> parent::<db-txn> flags::<int>)
+  "DB_TXN *tid;
+CHECK_SENV(env_scm);
+env->txn_begin(env, parent, &tid, flags);
+SCM_RETURN(new_db_txn(tid));")
+
+
+
+
+(define-cproc txn-abort (txnid::<db-txn>)
+  "txnid->abort(txnid);
+SCM_DB_TXN(txnid_scm)=NULL;
+return SCM_UNDEFINED;")
+
+
+;; Child transactions should never be explicitly prepared.
+(define-cproc txn-prepare (txnid::<db-txn> gid::<int>)
+  "
+#ifndef DB_GID_SIZE
+#define DB_GID_SIZE DB_XIDDATASIZE
+#endif
+
+u_int8_t gid[DB_GID_SIZE];
+txnid->prepare(txnid, gid);
+SCM_DB_TXN(txnid_scm)=NULL;
+return SCM_UNDEFINED;")
+
+
+(define-cproc txn-commit (txnid::<db-txn> flags::<int>)
+  "txnid->commit(txnid,flags);
+SCM_DB_TXN(txnid_scm)=NULL;
+return SCM_UNDEFINED;")
+
+
+;; All cursors opened within the transaction must be closed before the transaction is committed.
+(define-enum DB_TXN_NOSYNC)
+(define-enum DB_TXN_SYNC)
+
+
+
+(define-cproc txn-discard (txnid::<db-txn> flags::<int>)
+  "txnid->commit(txnid,flags);
+SCM_DB_TXN(txnid_scm) = NULL;
+return SCM_UNDEFINED;")
+
+(define-cproc txn-id (txnid::<db-txn>)
+  (return <int> "txnid->id"))
+
+
+
+(define-cproc txn-set-timeout (txnid::<db-txn> timeout::<int> flags::<int>)
+  (return <int> "txnid->set_timeout"))
+
+
+
+;;; Transaction `system'
+                                        ;int DB_ENV->set_tx_max(DB_ENV *dbenv, u_int32_t tx_max);
+                                        ;int DB_ENV->set_tx_timestamp(DB_ENV *dbenv, time_t *timestamp);
+                                        ;int DB_ENV->txn_checkpoint(const DB_ENV *env, u_int32_t kbyte, u_int32_t min, u_int32_t flags);
+                                        ;int DB_ENV->txn_recover(DB_ENV *dbenv, DB_PREPLIST preplist[],long count, long *retp, u_int32_t flags);
+                                        ;int DB_ENV->txn_stat(DB_ENV *env, DB_TXN_STAT **statp, u_int32_t flags);
+
+
+
+
+
+
+;;;  advanced functions on the `environment' using  transactions!
+
+;; fixme:  this needs  `errorify'
+(define-cproc db-dbremove (env::<db-env> txnid::<db-txn> file::<const-char*>
+                                         database::<const-char*-or-false>
+                                         ;;database::<const-char*>
+                                         flags::<int>)
+  ;; fixme: CHECK_SENV(env_scm);
+  (return <int> "env->dbremove"))
+
+
+(define-cproc db-env-dbrename (env::<db-env> txnid::<db-txn>
+                                             file::<const-char*> database::<const-char*>
+                                             new-name::<const-char*> flags::<int>)
+  ;; CHECK_SENV(env_scm);
+  (return <int> "env->dbrename"))
+
+
+;char * db_strerror(int error);
+(define-cproc db-strerror (error::<int>)
+  (return <const-char*> "db_strerror"))
+
+(define-cproc db-env-error (env::<db-env> error::<int> fmt::<const-char*>)
+  ;; CHECK_SENV(env_scm);
+  (return <void> "env->err"))
+
+
+
+
+
+;;int DB_ENV->open(DB_ENV *, char *db_home, u_int32_t flags, int mode);
+(define-cproc db-env-open (env::<db-env> db-home::<const-char*> flags::<int> mode::<int>)
+  "
+CHECK_SENV(env_scm);
+int status = env->open(env, db_home, flags, mode);
+if (status){
+  env->close(env, 0);
+  SCM_DB_ENV(env_scm) = NULL; /*fixme: all functions should test if the env is open & ok! */
+
+ /*fixme: i should throw an object! */
+  Scm_Error(\"db_env_create failed %d\", status);
+}
+SCM_RETURN (env_scm);")
+
+(define-cproc db-env-get-home (env::<db-env>)
+  "
+   CHECK_SENV(env_scm);
+   const char *homep;
+   int status = env->get_home(env, &homep);
+   if (status)
+      Scm_Error(\"%s failed %d\", __SCM_FUNCTION__, status);
+   SCM_RETURN(SCM_MAKE_STR_COPYING(homep));")
+
+;; flags:
+
+(define-enum  DB_JOINENV)
+(define-enum  DB_INIT_CDB)		;locking ... concurrent
+(define-enum  DB_INIT_MPOOL)		; shmem pool
+
+(define-enum  DB_INIT_LOCK)
+(define-enum  DB_INIT_TXN)		;transactions
+
+;;
+(define-enum  DB_RECOVER)
+(define-enum  DB_RECOVER_FATAL)
+
+;;
+(define-enum DB_USE_ENVIRON)
+(define-enum DB_USE_ENVIRON_ROOT)
+
+(define-enum DB_CREATE)
+(define-enum DB_LOCKDOWN) ; Lock shared Berkeley DB environment files and memory_mapped databases into memory.
+(define-enum DB_PRIVATE)
+(define-enum DB_SYSTEM_MEM)
+(define-enum DB_THREAD)
+
+
+
+
+;; mode... for `created'  0 read
+;;return
+(define-enum EAGAIN)
+;(define-enum EINVAL)
+(define-enum ENOSPC)
+
+
+
+
+(define-cproc db-env-remove (env::<db-env> db_home::<const-char*> flags::<int>)
+  (return <int> "env->remove"))
+
+
+
+
+
+
+;;(db-env::<db-env> txnid::<db-txn> file::<const-char*> database<const-char*> flags::<int>)
+;int DB_ENV->set_app_dispatch(DB_ENV *dbenv,int (*tx_recover)(DB_ENV *dbenv,DBT *log_rec, DB_LSN *lsn, db_recops op));
+
+
+
+
+
+;;; `Database':
+;; fixme:  not true:  I use an intermediate object, where i store information we use to handle the db-handle.
+
+(define-type <db-handle> "DB*" "box for the berkey db handle"
+  "SCM_DB_P"
+  "SCM_DB"
+  "new_db")
+
+(define-cclass <db-handle> "ScmDb*"
+  "ScmDB_class"				;the tag ??
+  ()					;cpa
+  (
+   (flags
+    :type <int>
+    ;; :c-spec
+    :getter
+    " u_int32_t flags;
+/* DB */
+obj->get_flags(obj, &flags);
+SCM_RETURN(Scm_MakeInteger(flags));"
+    :setter
+    "u_int32_t flags = Scm_GetInteger(value);
+int status = obj->set_flags(obj, flags);
+if (status) {obj->err(obj, status, \"db-set-flags: flags: %d\", flags);}"
+    )
+   ;; 
+   (key-type
+    :getter "
+UNUSED(obj);
+SCM_RETURN(Scm_MakeInteger(((ScmDb*)OBJARG)->key_type));"
+    :setter "UNUSED(obj);
+((ScmDb*)OBJARG)->key_type = Scm_GetInteger(value);"
+    )
+   (value-type
+    :getter "UNUSED(obj);
+SCM_RETURN(Scm_MakeInteger(((ScmDb*)OBJARG)->value_type));"
+    :setter "UNUSED(obj);
+((ScmDb*)OBJARG)->value_type = Scm_GetInteger(value);"
+    )
+   )
+  (printer (c "db_print"))
+  (allocator (c "Scm_db_allocate")))
+
+
+
+;; Printer: todo?
+
+
+;; fixme:
+(define-cproc db-create (env::<db-env> flags::<int>) 
+  "DB*  db;
+/* mmc:  null env is ok! */
+#if DEBUG
+if (! env)
+   Scm_Warn(\"%s: creating with NULL env.\\n\", __FUNCTION__);
+#endif
+
+int result = db_create(&db, env, flags);
+   if (result){
+      Scm_Error(\"db_create failed %d\", result);
+   }
+SCM_RETURN (new_db(db, env_scm));")
+
+
+;; (define-enum DB_XA_CREATE)              ; dropped in 4.8
+
+
+(define-cproc db-open (db::<db-handle> txnid::<db-txn> filename::<const-char*> database::<const-char*-or-false>
+                                       dbtype::<int> flags::<int> mode::<int>)
+  " /* The DB->open method returns a non-zero error value on failure and 0 on success. If DB->open fails, the
+   [4]DB->close method should be called to discard the [5]DB handle. */
+CHECK_SDB(db_scm);
+
+if (((ScmDb*)db_scm)->open_p)
+  Scm_Panic(\"%s: the db has been already opened!\", __SCM_FUNCTION__);
+
+ ((ScmDb*)db_scm)->open_p = 1;   /* fixme: useless? */
+int status = db->open(db, txnid, filename, database, dbtype, flags, mode);
+if (status) {
+   db->err(db, status, \"%s: %s(%s) flags: %u\",
+               __SCM_FUNCTION__,
+               filename?:\"<null filename>\",
+               database?:\"\",
+               flags);
+};
+
+SCM_RETURN(db_scm);")
+
+(define-cproc db-open? (db::<db-handle>)
+  ;; db_scm->open_p
+  "SCM_RETURN(SCM_DB(db_scm)?SCM_TRUE:SCM_FALSE);")
+                        
+
+;; DB->open(DB *db, DB_TXN *txnid, const char *file, const char *database, DBTYPE type, u_int32_t flags, int mode);
+
+(define-enum DB_AUTO_COMMIT)
+;(define-enum  DB_CREATE)
+(define-enum DB_DIRTY_READ)
+(define-enum DB_EXCL)
+(define-enum DB_NOMMAP)
+(define-enum DB_RDONLY)
+;(define-enum DB_THREAD)
+(define-enum DB_TRUNCATE)
+
+
+;; errors
+(define-enum DB_LOCK_DEADLOCK)
+(define-enum DB_OLD_VERSION)
+
+(define-enum EEXIST)
+(define-enum EINVAL)
+(define-enum ENOENT)
+
+
+
+;; DBTYPE
+(define-enum DB_BTREE)
+(define-enum DB_HASH)
+(define-enum DB_RECNO)
+(define-enum DB_QUEUE)
+(define-enum DB_UNKNOWN)
+;; flags
+
+
+
+
+;; fixme:
+(define-cproc db-close (db::<db-handle> &optional (flags::<int> 0))
+  "CHECK_SDB (db_scm);
+   int result = db->close(db, flags);
+   SCM_DB(db_scm) = NULL;
+
+   ((ScmDb*) db_scm)->open_p = 0;
+   if (result){
+      Scm_Error(\"%s failed %d\", __SCM_FUNCTION__, result);
+   }
+   SCM_RETURN(Scm_MakeInteger(result));")
+
+
+
+;;; `DBT'
+
+(define-type <dbt> "DBT*" #f
+  "SCM_DBT_P"
+  "SCM_DBT"
+  "new_db_thang")
+
+(define-cclass <dbt> "ScmDbT*"
+  "ScmDBT_class"
+  ()
+  ()
+  (printer (c "dbt_print")))
+
+
+;; this will be a subclass of uvector !!!
+(define-cproc db-make-thang (v::<uvector>
+			     &optional
+                             (start::<fixnum> 0)
+                             (end::<fixnum> (c "Scm_MakeInteger(SCM_UVECTOR_SIZE(v))"))
+                                        ;fixme: this could be use more times ^^^^
+			     (capacity::<fixnum> (c "Scm_MakeInteger(SCM_UVECTOR_SIZE(v))"))
+                                        ;    once again ^^^^
+			     (partial::<fixnum> 0)
+			     (offset::<fixnum> 0)
+			     (flags::<fixnum> 0))
+  ;; the vector is used as buffer of the THANG !
+  ;;
+  "SCM_RETURN(new_db_thang(db_thang_from_uvector(v, start, end,capacity, partial, offset, flags)));")
+
+
+
+
+
+;; not values?
+;; should return uvector ?
+;; maybe thang-stat ?
+(define-cproc db-unwrap-thang (dbt::<dbt>)
+  "SCM_RETURN(SCM_LIST5(
+Scm_MakeInteger(dbt->size),
+Scm_MakeInteger(dbt->ulen),
+Scm_MakeInteger(dbt->dlen),
+Scm_MakeInteger(dbt->doff),
+Scm_MakeInteger(dbt->flags)));")
+
+
+
+(define-enum DB_DBT_MALLOC)
+(define-enum DB_DBT_REALLOC)
+(define-enum DB_DBT_PARTIAL)
+(define-enum DB_DBT_USERMEM)
+
+
+
+
+; fixme: i need the thang more accessible.
+
+
+; int DB->get(DB *db,DB_TXN *txnid, DBT *key, DBT *data, u_int32_t flags);
+;;; retrieving data:
+(define-cproc db-get-internal (db::<db-handle>
+                               txnid::<db-txn>
+                               key::<dbt> ;fixme! 
+                                        ; data::<dbt>
+                                        ; v::<uvector>
+                               ;; the V vector
+                               &optional (flags::<int> 0))
+  "DBT data;
+int result;
+
+CHECK_SDB(db_scm);
+INIT_THANG(data);
+
+result = db->get(db, txnid, key, &data, flags);
+
+if (result){
+   /*  free ?? */
+  db->err(db, result, \"flags: %d\", flags);
+}
+return convert_thang_to_scheme(key, (((ScmDb*)db_scm)->value_type));")
+
+
+;; mmc:  obsolete
+
+;; we don't have the key ready (as a thang):
+;;have a string and want  value string?
+
+;; returns:   #f -> not found   should be eof() ?
+;;            
+(define-cproc db-get (db::<db-handle>
+                      txnid::<db-txn>
+                      key ;::<dbt>
+                      ;; v::<uvector>
+                      ;; the V vector
+                      &optional (flags::<int> 0))
+  (return "my_db_get"))
+
+(define-enum db_thang_type_scm)
+(define-enum db_thang_type_uvector)
+(define-enum db_thang_type_string)
+(define-enum db_thang_type_int)
+(define-enum db_thang_type_boolean)
+  
+
+
+;; fixme:
+(define-cproc db-get-recnum (db::<db-handle> txnid::<db-txn> recno::<int> &optional (flags::<int> 0))
+  "DBT key;
+DBT data;
+
+Scm_Warn(\"%s: needs review!\\n\", __FUNCTION__);
+CHECK_SDB(db_scm);
+memset(&key, 0, sizeof(key));
+
+key.data = &recno;			/*db_recno_t* */
+key.size = sizeof(recno);
+
+/* fixme   key is not used/backfilled.  if it were, i should use DB_DBT_USERMEM ? mmc!*/
+memset(&data, 0, sizeof(data));
+
+/* flags|=DB_SET_RECNO;*/			/* this is wrong!!! only in case of btree */
+
+
+/* fprintf(stderr, \"->get from %d flags: %d\\n\", (* (int*) key.data),flags); */
+int result = db->get(db, txnid, &key, &data, flags);
+
+if (result){
+  db->err(db, result, \"recno: %d flags: %d\", recno, flags);
+/* Scm_Error(\"db-get-recnum, %d\", result); */
+}
+
+SCM_RETURN(Scm_MakeU8VectorFromArrayShared(data.size, data.data));")
+
+
+
+ #;(define-cproc db-get-to (db::<db-handle> txnid::<db-txn>
+					 key::<dbt>
+					 data::<dbt>
+					;v::<uvector>
+					 ;; the V vector
+					 &optional (flags::<int> 0))
+   ;(return <int> "db->get")
+  "
+CHECK_SDB(db_scm);
+data->flags |= DB_DBT_USERMEM;
+SCM_RETURN(Scm_MakeInteger(db->get(db, txnid, key, data, flags)));")
+
+
+(define-enum DB_CONSUME)
+(define-enum DB_CONSUME_WAIT)
+(define-enum DB_GET_BOTH)
+(define-enum DB_SET_RECNO)
+
+;; results
+(define-enum DB_NOTFOUND)
+
+
+
+;; fixme!
+(define-cproc db-put (db::<db-handle> txnid::<db-txn> key data  &optional (flags::<int> 0))
+  (return "my_db_put"))
+
+
+(define-enum DB_APPEND)
+(define-enum DB_NODUPDATA)
+(define-enum DB_NOOVERWRITE)
+
+
+;;
+(define-cproc db-put-recnum (db::<db-handle> txnid::<db-txn> recno::<int> data &optional (flags::<int> 0))
+  ;(return <int> "db->get")
+  "DBT key;
+DBT* real_data;
+
+CHECK_SDB(db_scm);
+memset(&key, 0, sizeof(key));
+key.data = &recno;			/*db_recno_t* */
+key.size = sizeof(recno);
+
+Scm_Warn(\"%s: needs review!\\n\", __FUNCTION__);
+int freshly_allocated = scheme_2_thang(data, &real_data, ((ScmDb* )(db->app_private))->value_type);
+
+int result = db->put(db, txnid, &key, real_data, flags); /*  */
+if (result) {
+  printf(\"->put failed on recno: %d flags: %d\\n\",recno, flags);
+  db->err(db, result, \"recno: %d flags: %d\", recno, flags);
+}
+if (freshly_allocated > 0)
+   free(real_data);
+/* key contains the assigned recno: */
+SCM_RETURN(Scm_MakeInteger(*((int*) key.data)));")
+
+
+
+;; Todo: This should look at the result, and raise exception on error!
+;; Fixme: Should accept <string> as key!
+(define-cproc db-del (db::<db-handle> txnid::<db-txn> key flags::<int>) ;fixme: key::<dbt>
+  (return "my_db_del"))
+  ;; "CHECK_SDB(db_scm);
+;;   int i = db->del(db,txnid,key,flags);
+;;   SCM_RETURN(Scm_MakeInteger(i));")
+  
+
+
+;;; info on the DB itself:
+(define-cproc db-fd (db::<db-handle>)
+  "int fd;
+CHECK_SDB(db_scm);
+int status = db->fd(db, &fd);
+if (status) {
+   db->err(db, status, \"db-fd: %s(%s) flags:\");
+};
+SCM_RETURN(Scm_MakeInteger(fd));")
+
+
+
+
+
+;  (return <int> "db->fd("))
+  ;DB *db, int *fdp);
+
+
+
+;int DB->get_type(DB *db, DBTYPE *type);
+(define-cproc db-type (db::<db-handle>)
+;  (return <int> "db->get_type"))
+  "DBTYPE type;         /*fixme: */
+CHECK_SDB(db_scm);
+int result = db->get_type((db), &type);
+if (result){
+  db->err(db, result, \"db-type\");
+/* free(stat)*/
+}
+SCM_RETURN(Scm_MakeInteger(type)); ")
+
+;; fixme  i should return  a symbol!
+
+
+
+;;; Disk operation:
+(define-cproc db-sync (db::<db-handle> flags::<int>)  ;; flags .. 0
+  "CHECK_SDB(db_scm);
+SCM_RETURN(Scm_MakeInteger(db->sync(db, flags)));")
+
+
+
+(define-cproc db-truncate (db::<db-handle> txnid::<db-txn> flags::<int>)  ;; flags .. 0
+  "
+unsigned int count;
+int res;
+CHECK_SDB(db_scm);
+res=db->truncate(db, txnid, &count, flags);
+return Scm_Values2(Scm_MakeInteger(res), Scm_MakeInteger(count));")
+
+
+;;
+(define-cproc db-remove (db::<db-handle>
+                         file::<const-char*> database::<const-char*-or-false>
+                         &optional (flags::<int> 0))
+  "CHECK_SDB(db_scm);
+SCM_RETURN(Scm_MakeInteger(db->remove(db,file, database, flags)));")
+
+(define-cproc db-rename (db::<db-handle>
+			 file::<const-char*> database::<const-char*>
+			 ;; database::<const-char*-or-false> ;huh?
+                         new-name::<const-char*> flags::<int>)
+  "CHECK_SDB(db_scm);
+int result=db->rename(db, file, database, new_name, flags);
+SCM_DB(db_scm)=NULL;   /* fixme! */
+SCM_RETURN(Scm_MakeInteger(result)); ")
+
+
+
+;;; index
+(define-cproc db-key-range (db::<db-handle> txnid::<db-txn> key::<dbt> flags::<int>)
+  ;; flags .. 0
+"DB_KEY_RANGE key_range;
+CHECK_SDB(db_scm);
+int result=db->key_range(db, txnid, key, &key_range, flags);
+SCM_RETURN(SCM_LIST4(
+	Scm_MakeInteger(result),
+	Scm_MakeFlonum(key_range.less),
+	Scm_MakeFlonum(key_range.equal),
+	Scm_MakeFlonum(key_range.greater)));")
+
+
+
+;;; `Recno-specific'
+(define-cproc db-set-re-len (db::<db-handle> len::<int>)
+  ;; flags .. 0
+  " CHECK_SDB(db_scm);
+int result=db->set_re_len(db, len);
+SCM_RETURN(Scm_MakeInteger(result)); ")
+
+
+;; in 4.2 ?
+
+; (define-cproc db-get-re-len (db::<db-handle> )
+;   ;; flags .. 0
+;   "u_int32_t len;
+; int result = db->get_re_len(db, &len);
+; SCM_RETURN(Scm_MakeInteger(len));")
+
+
+;;; `Stats'
+(define-type <db-hash-stats> "DB_HASH_STAT*" #f
+  "SCM_DB_HASH_STAT_P" "SCM_DB_HASH_STAT"
+  "new_db_hash_stat")
+
+
+(define-cclass <db-hash-stats> "DB_HASH_STAT*" "ScmDB_HASH_STAT_class"
+  ()
+  ((hash-magic :type <int>)
+   (hash-version :type <int>)
+   (hash-nkeys :type <int>)
+   (hash-ndata :type <int>)
+   (hash-pagesize :type <int>)
+   (hash-ffactor :type <int>)
+   (hash-buckets :type <int>)
+   (hash-free :type <int>)
+   (hash-bfree :type <int>)
+   (hash-bigpages :type <int>)
+   (hash-big_bfree :type <int>)
+   (hash-overflows :type <int>)
+   (hash-ovfl_free :type <int>)
+   (hash-dup :type <int>)
+   (hash-dup_free :type <int>)))
+
+
+(define-cproc db-hash-stat (db::<db-handle> txnid::<db-txn> flags::<int>)
+  "
+CHECK_SDB(db_scm);
+DB_HASH_STAT* stat=NULL;
+int result=db->stat(db, txnid, (void*) &stat, flags);
+return Scm_Values2(Scm_MakeInteger(result), new_db_hash_stat(stat));")
+
+
+(define-type <db-btree-stats> "DB_BTREE_STAT*" #f
+  "SCM_DB_BTREE_STAT_P" "SCM_DB_BTREE_STAT"
+  "new_db_btree_stat")
+
+
+(define-cclass <db-btree-stats> "DB_BTREE_STAT*" "ScmDB_BTREE_STAT_class"
+                                        ;      "Scm_btree_stat_class"
+  ()
+  ((bt-magic :type <int>)
+   (bt-version :type <int>)
+   (bt-nkeys :type <int>)
+   (bt-ndata :type <int>)
+   (bt-pagesize :type <int>)
+
+   (bt-minkey :type <int>)
+   (bt-re_len :type <int>)
+   (bt-re_pad :type <int>)
+   (bt-levels :type <int>)
+   (bt-int_pg :type <int>)
+   (bt-leaf_pg :type <int>)
+   (bt-dup_pg :type <int>)
+   (bt-over_pg :type <int>)
+
+   (bt-free :type <int>)
+   (bt-int_pgfree :type <int>)
+   (bt-leaf_pgfree :type <int>)
+   (bt-dup_pgfree :type <int>)
+   (bt-over_pgfree :type <int>)))
+
+
+(define-cproc db-btree-stat (db::<db-handle> txnid::<db-txn> flags::<int>)
+  "DB_BTREE_STAT* stat=NULL;
+CHECK_SDB(db_scm);
+
+int result=db->stat(db, txnid, (void*) &stat, flags);
+if (result){
+  db->err(db, result, \"db-btree-stat: flags: %d\", flags);
+/* free(stat)*/
+}
+SCM_RETURN(new_db_btree_stat(stat));")
+
+
+
+(define-enum DB_FAST_STAT)
+
+
+; "DB_KEY_RANGE key_range;
+; int result=db->key_range(db, txnid, key, &key_range, flags);
+; SCM_RETURN(SCM_LIST4(
+; 	Scm_MakeInteger(result),
+; 	Scm_MakeFlonum(key_range.less),
+; 	Scm_MakeFlonum(key_range.equal),
+; 	Scm_MakeFlonum(key_range.greater)));")
+
+
+; break;
+; DB_RECNO_STAT:
+
+
+
+
+;;; `cursor'
+;;; define the `class', registered  in (and accessible from)  the scheme level.c;; define, how the generic SCM_*  is unboxed to the C type.
+(define-type <db-cursor> "DBC*" #f; "box for the postgresql handle"
+  "SCM_DBC_P"
+  "SCM_DBC"
+  "new_db_cursor" ; fixme: i use 2 parameters !!
+  )
+
+
+(define-cclass <db-cursor> "ScmDbT*"
+  "ScmDBC_class"				;the tag ??
+  ()					;cpa
+  (
+   ;; DB
+   ;; transaction  ??
+   (key
+    :getter "UNUSED(obj);
+SCM_RETURN(((ScmDbC*) OBJARG)->key);"
+    :setter #f ;"((ScmDb*)OBJARG)->key_type = Scm_GetInteger(value);"
+    )
+
+   (value
+    :getter "UNUSED(obj);
+SCM_RETURN(((ScmDbC*) OBJARG) ->value);"
+    :setter #f; "((ScmDb*)OBJARG)->key_type = Scm_GetInteger(value);"
+    ))
+  (printer (c "dbc_print"))
+  )
+
+
+
+;;; this will be a subclass of uvector !!!
+(define-cproc db-cursor-create (db::<db-handle> txnid::<db-txn> flags::<int>)
+  ;(return <dbc> "make-cursor"))
+"DBC* cursor;
+CHECK_SDB(db_scm);
+
+int result = db->cursor(db, txnid, &cursor, flags);
+
+if (result){
+  db->err(db, result, \"flags: %d\",flags);
+/* Scm_Error(\"db-get-recnum, %d\", result); */
+}
+return new_db_cursor((ScmDb*) db_scm, cursor);")
+
+(define-enum DB_WRITECURSOR)
+;Specify that the cursor will be used to update the database. The underlying
+; database environment must have been opened using the `DB_INIT_CDB' flag.
+
+
+
+;; fixme:  segfault on closing null !!
+;; # of data  for the key, at which cursor points.
+(define-cproc db-cursor-count (cursor::<db-cursor> flags::<int>)
+  "db_recno_t count;
+int result=cursor->c_count(cursor, &count, flags);
+check_flags_zero(flags);
+
+if (result)
+   SCM_DBC_DB(cursor_scm)->err(SCM_DBC_DB(cursor_scm), result, \"flags: %d\",flags);
+return Scm_MakeInteger(count);")
+
+;(define-enum DB_KEYEMPTY)
+
+
+
+;; ignore key:
+(define-enum DB_AFTER)  		;key ignored
+(define-enum DB_BEFORE)			;
+(define-enum DB_CURRENT)		; overwrite
+
+;;
+(define-enum DB_KEYFIRST)
+(define-enum DB_KEYLAST)
+;(define-enum DB_NODUPDATA)
+
+
+
+
+;; mmc: The idea here is to get Scheme objects, in scheme memory.
+;; C thangs are created on the stack. ->data is converted into scheme by reusing the memory!
+;; b/c the memory is allocated through GC_malloc functions !!
+
+;; DBT objects are on the stack, temporary!
+(define-cproc db-cursor-move (cursor::<db-cursor> flags::<int>) ;flags = where
+  ;;  key is not used as a parameter.
+  "
+DBT key; /* = {0};*/
+DBT data;/* = {0};*/
+
+INIT_THANG(key);
+INIT_THANG(data);
+
+return scm_db_cursor_get((ScmDbC*) cursor_scm, &key, &data, flags);")
+
+
+;(define-enum DB_CURRENT)
+(define-enum DB_FIRST)
+(define-enum DB_LAST)
+;(define-enum DB_GET_BOTH)
+(define-enum DB_GET_BOTH_RANGE)
+(define-enum DB_GET_RECNO)
+(define-enum DB_JOIN_ITEM)
+(define-enum DB_NEXT)
+(define-enum DB_PREV)
+(define-enum DB_NEXT_DUP)
+(define-enum DB_NEXT_NODUP)
+(define-enum DB_PREV_NODUP)
+
+
+
+(define-enum DB_SET)
+(define-enum DB_SET_RANGE)
+;(define-enum DB_SET_RECNO)
+
+;; orthogonal:
+(define-enum DB_MULTIPLE)
+(define-enum DB_MULTIPLE_KEY)
+(define-enum DB_RMW)
+
+
+
+;; key:   is it modified `only' iff  not set
+;;             or DB_SET_RANGE / DB_GET_BOTH_RANGE
+;; 
+;;             or DB_SET_RECNO  
+;; 
+;;
+(define-cproc db-cursor-get (cursor::<db-cursor> key::<dbt> &optional (flags::<int> 0))
+  "
+DBT data;
+INIT_THANG(data);
+
+Scm_Warn(\"%s: needs review!\\n\", __FUNCTION__);
+return scm_db_cursor_get((ScmDbC*) cursor_scm, key, &data, flags);")
+
+
+;; The point of this function is to `read' into `uvector', which is embedded into the `<dbt>'
+;; if the cursor has C conversion functions ??
+;; obsolete?
+(define-cproc db-cursor-get-internal (cursor::<db-cursor> key::<dbt> data::<dbt> &optional (flags::<int> 0))
+  "int result;
+
+Scm_Warn(\"%s: needs review!\\n\", __FUNCTION__);
+result = cursor->c_get(cursor, key, data, flags);
+/* fixme:  if  result -> data ? */
+
+if (result){
+  SCM_DBC_DB(cursor_scm)->err(SCM_DBC_DB(cursor_scm), result, \"flags: %d\",flags);
+/* Scm_Error(\"db-get-recnum, %d\", result); */
+}
+
+return Scm_Values2(
+  convert_thang_to_scheme(key, (((ScmDbC*)cursor_scm)->key_type)),
+  convert_thang_to_scheme(data, (((ScmDbC*)cursor_scm)->value_type)));")
+
+
+
+
+;; fixme: For DB_GET_RECNO to be specified, the underlying database must be of type Btree,
+;; and it must have been created with the [8]DB_RECNUM flag.
+
+(define-cproc db-cursor-recno (cursor::<db-cursor>) ;recno::<int> &optional (flags::<int> 0)
+  "
+int result;
+DBT key;
+DBT data;
+
+INIT_THANG(key);
+INIT_THANG(data);
+Scm_Warn(\"%s: needs review!\\n\", __FUNCTION__);
+
+#if 0
+db_recno_t recno;
+data.data = &recno;
+data.len = sizeof(db_recno_t);
+data.size = sizeof(db_recno_t);
+#endif
+
+
+result = cursor->c_get(cursor, &key, &data, DB_GET_RECNO);
+/* db_recno_t */
+return (Scm_MakeInteger( *(int*) data.data));")
+
+
+(define-cproc db-cursor-put (cursor::<db-cursor> key data &optional (flags::<int> 0))
+  "return scm_db_cursor_put(cursor_scm, key_scm, data_scm, flags);")
+
+
+; return:
+(define-cproc db-cursor-del (cursor::<db-cursor> flags::<int>)
+  ;"check_flags_zero(flags);"
+  (return <int> "cursor->c_del"))
+
+(define-cproc db-cursor-dup (cursor::<db-cursor> key::<dbt> data::<dbt> &optional (flags::<int> 0))
+  (return <int> "cursor->c_get"))
+
+
+(define-cproc db-cursor-close (cursor::<db-cursor>)
+  ;; fixme: This is wrong!
+  ;; (return <int> "cursor->c_close")
+  "return db_cursor_close(cursor_scm);")
+
+
+
+;;; `configuring'
+; int DB->set_q_extentsize(DB *db, u_int32_t extentsize);
+
+
+
+;  The DB->set_bt_compare method may not be called after the DB->open method is called. If the      
+;    database already exists when DB->open is called, the information specified to                    
+;    DB->set_bt_compare must be the same as that historically used to create the database or          
+;    corruption can occur.                                                                            
+
+
+
+
+; '(define-cproc db-set-bt-compare (db::<db-handle> function)
+;   "
+; int status;
+
+; if (Scm_Integerp(function))
+; switch Scm_Integer(function)
+;    {
+;     case 0:
+;     break;
+;     case 1:
+;     break;
+;     }
+; status = db->set_bt_compare(db,function);
+; return Scm_MakeInteger(status);")
+
+
+; (define-cproc db-set-bt-prefix (db::<db-handle> function)
+;   "
+; int status;
+
+; if (Scm_Integerp(function))
+; switch Scm_Integer(function)
+;    {
+;     case 0:
+;     break;
+;     case 1:
+;     break;
+;     }
+; status = db->set_bt_compare(db,function);
+; return Scm_MakeInteger(status);")
+
+
+
+
+
+
+(define-cproc db-set-pagesize (db::<db-handle> size::<int>)
+  ;; flags .. 0
+  ;; fixme!          CHECK_SDB(db_scm);
+  (return <int> "db->set_pagesize"))
+
+
+(define-cproc db-set-cachesize (db::<db-handle> gbytes::<int> bytes::<int> ncache::<int>)
+  ;; flags .. 0
+  (return <int> "db->set_cachesize"))
+
+
+(define-cproc db-set-bt-minkey (db::<db-handle>  bt_minkey::<int>)
+  (return <int> "db->set_bt_minkey"))
+
+
+; (define-cproc db-set-flags (db::<db-handle>  flags::<int>) ;fixme  int32 !!
+;   (return <int> "db->set_flags"))
+
+; (define-cproc db-get-flags (db::<db-handle>) ;fixme  int32 !!
+;   (return <int> "db->get_flags"))
+;; btree-> DB-DUP  DB-DUPSORT DB-RECNUM  DB-REVSPLITOFF
+
+;; hash: DB-DUP DB-DUPSORT
+
+;; recno:  `DB-SNAPSHOT'
+
+
+;;;; recno
+;DB->set_re_source
+;DB->set_re_delim
+
+
+
+
+
+;;; bulk retrieval:
+
+; DB_MULTIPLE_INIT(void *pointer, [8]DBT *data);
+; DB_MULTIPLE_NEXT(void *pointer, [14]DBT *data, void *retdata, size_t retdlen);
+; DB_MULTIPLE_KEY_NEXT(void *pointer, [19]DBT *data, void *retkey, size_t retklen, void *retdata, size_t retdlen);
+; DB_MULTIPLE_RECNO_NEXT(void *pointer, [24]DBT *data, db_recno_t recno, void * retdata, size_t retdlen);
+
+
+
+
+
+
+;;; `logging'
+
+
+
+
+
+;;; `locking'
+
+
+;;; `memory' pool
+#|
+int DB_ENV->memp_fcreate(DB_ENV *dbenvp, DB_MPOOLFILE **dbmfp, u_int32_t flags);
+
+int DB_MPOOLFILE->close(DB_MPOOLFILE *mpf, u_int32_t flags);
+int DB_MPOOLFILE->get(DB_MPOOLFILE *mpf,db_pgno_t *pgnoaddr, u_int32_t flags, void **pagep);
+
+
+int DB_MPOOLFILE->open(DB_MPOOLFILE *mpf,char *file, u_int32_t flags, int mode, size_t pagesize);
+
+int DB_MPOOLFILE->put(DB_MPOOLFILE *mpf, void *pgaddr, u_int32_t flags);
+
+
+int DB_MPOOLFILE->set(DB_MPOOLFILE *mpf, void *pgaddr, u_int32_t flags);
+
+int DB_MPOOLFILE->sync(DB_MPOOLFILE *mpf);
+
+int DB_MPOOLFILE->set_clear_len(DB_MPOOLFILE *mpf, u_int32_t len);
+
+int DB_MPOOLFILE->set_fileid(DB_MPOOLFILE *mpf, u_int8_t *fileid);
+
+
+int DB_MPOOLFILE->set_ftype(DB_MPOOLFILE *mpf, int ftype);
+
+int DB_MPOOLFILE->set_lsn_offset(DB_MPOOLFILE *mpf, int32_t lsn_offset);
+
+int DB_MPOOLFILE->set_pgcookie(DB_MPOOLFILE *mpf, DBT *pgcookie);
+|#
+
+"#define Scm_Init_bdb  internal_init_bdb"
