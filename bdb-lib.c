@@ -1,7 +1,6 @@
 /* support functions for bdb.stub */
 
 /* #include <alloca.h> */
-#define GAUCHE_API_PRE_0_9 1
 
 #include "bdb-lib.h"
 #if 0
@@ -39,9 +38,9 @@ void *my_malloc(size_t s)
 
 void my_free(void* p)
 {
-#if DEBUG 
+#if DEBUG
    Scm_Warn("--------------%s-------------", __FUNCTION__);
-#endif 
+#endif
    return GC_free(p);           /* is that a no-op? */
 }
 
@@ -62,11 +61,13 @@ ScmObj new_db_env (DB_ENV* env)
    }
 #endif
    if (env) {
+      env->set_alloc(env, GC_malloc_atomic, GC_realloc,
 #if gc_alloc
-      env->set_alloc(env, GC_malloc_atomic, GC_realloc, my_free); /* GC_free */
-#else      
-      env->set_alloc(env, GC_malloc_atomic, GC_realloc, GC_free); /* GC_free */
+                     my_free
+#else
+                     GC_free
 #endif
+                     );
    }
    Scm_RegisterFinalizer(SCM_OBJ(g), db_env_finalize, NULL);
    return SCM_OBJ(g);
@@ -112,7 +113,7 @@ void dbtxn_print(ScmObj obj, ScmPort *out, ScmWriteContext *ctx)
   DB_TXN* E=SCM_DB_TXN(obj);
   if (E) {
     /*   Scm_Printf(out, "#<db-txn %d>", txn_id(E);*/
-    Scm_Printf(out, "#<db-txn %d>", E->id(E)); 
+    Scm_Printf(out, "#<db-txn %d>", E->id(E));
   } else {
     Scm_Printf(out, "#<db-txn null>");
   }
@@ -175,7 +176,7 @@ new_db (DB* db, ScmObj env_s)
 {
    ScmDb* sdb = SCM_NEW(ScmDb);
    ScmDbEnv* env = (ScmDbEnv*) env_s;
-   
+
    SCM_SET_CLASS(sdb, SCM_CLASS_DB);
 
    sdb->db = db;
@@ -184,14 +185,14 @@ new_db (DB* db, ScmObj env_s)
 
    /* reverse pointer */
    db->app_private = sdb;
-   
+
    /* fprintf(stderr, "setting the error handler\n"); */
    db->set_errpfx(db,"gauche-bdb:");
    db->set_errcall(db,Scm_DBError);
 
    /* it could inherit from the env */
 #if gc_alloc
-#if DEBUG   
+#if DEBUG
    Scm_Warn("%s: db->set_alloc = GC_malloc_atomic", __FUNCTION__);
 #endif
 
@@ -200,7 +201,7 @@ new_db (DB* db, ScmObj env_s)
    if(!env)
       Scm_Panic("%s:env argument is NULL!", __FUNCTION__);
 #endif
-      
+
 
    if (env && env->env){
       /* *** ERROR: gauche-bdb:: DB->set_alloc: method not permitted when environment specified */
@@ -209,7 +210,7 @@ new_db (DB* db, ScmObj env_s)
       DB_ENV *dbenv = db->get_env(db);
 
       dbenv->get_home(dbenv,&homep);
-#if DEBUG 
+#if DEBUG
       Scm_Warn("%s: db has an ENV associated (homedir is %s, so it will use its allocation routines",
                __FUNCTION__, homep);
 #endif
@@ -266,7 +267,7 @@ db_print(ScmObj obj, ScmPort *out, ScmWriteContext *ctx)
       Scm_Printf(out, "#<db-handle: null>");
       Scm_Panic("%s: ->db is NULL!", __FUNCTION__);
    }
-   
+
    else if (! ((ScmDb*) obj)->open_p)
       Scm_Printf(out, "#<db-handle: not open>");
    else
@@ -368,7 +369,7 @@ static void db_thang_finalize(ScmObj obj, void* data)
 /*  no need to test. the finalizer has just been deduced from the structure itself ? */
    DBT* dbt = SCM_DBT(obj);
    if (dbt){
-#if DEBUG   
+#if DEBUG
       Scm_Warn("%s: ->data?\n", __FUNCTION__);
 #endif
       if (dbt->flags & (DB_DBT_REALLOC | DB_DBT_MALLOC)) {
@@ -380,7 +381,7 @@ static void db_thang_finalize(ScmObj obj, void* data)
          /* fixme: I should use the DB->free function! */
 #if gc_alloc
          my_free(dbt->data);
-#else      
+#else
          GC_free(dbt->data);
 #endif
       }
@@ -414,7 +415,7 @@ dispose_thang(int freshly_allocated, DBT* key_thang)
 /*  converting scheme data ->   read-only DBT*
  *  note: The DBT->data muste never be freed().
  *   it points to scheme memory, or in some case to same memory pices as DBT itself (ugly hack)
- *   
+ *
  *   returns:  have to free?
  *      0  no
  *      1  yes
@@ -478,7 +479,7 @@ scheme_2_thang(const ScmObj data, DBT** real_data, int type)
 
    case db_thang_type_uvector: {
       if (SCM_UVECTORP(data)) {
-         
+
          DBT* my_dbt = db_thang_from_uvector(
             /* eltsize = Scm_UVectorElementSize(Scm_ClassOf(SCM_OBJ(data))); */
             SCM_UVECTOR(data), 0, SCM_UVECTOR_SIZE(data),
@@ -496,15 +497,15 @@ scheme_2_thang(const ScmObj data, DBT** real_data, int type)
       ScmObj s_port = Scm_MakeOutputStringPort(1); /* private! */
       Scm_Write(data, s_port, 0); /* ??? */
 
-#if 0      
+#if 0
       {
-         Scm_Warn("%s:", Scm_GetStringConst(SCM_STRING (Scm_GetOutputString(SCM_PORT(s_port))))); 
+         Scm_Warn("%s:", Scm_GetStringConst(SCM_STRING (Scm_GetOutputString(SCM_PORT(s_port)))));
       };
-#endif 
-      return scheme_2_thang(Scm_GetOutputString(SCM_PORT(s_port)),
+#endif
+      return scheme_2_thang(Scm_GetOutputString(SCM_PORT(s_port), 0),
                             real_data,
                             db_thang_type_string);
-      /* Scm_GetStringConst(Scm_GetOutputString(sport)); */
+      /* Scm_GetStringConst(Scm_GetOutputString(sport, 0)); */
    }
    }
 
@@ -547,7 +548,7 @@ int extract_key_dbt(const ScmObj data, DBT** real_data)
       DBT*  rd;
 
       /* fixme:  why  db_recno_t??   if we use a  fixnum ??   this is not correct ! */
-      
+
       rd = malloc (sizeof(DBT) + sizeof(db_recno_t) );
       memset(rd, 0, sizeof(DBT));
       rd->data = ((char*) rd + sizeof(DBT));
@@ -581,10 +582,10 @@ convert_thang_to_scheme(DBT* t, int type)
    if (t->flags == DB_DBT_USERMEM)
       Scm_Panic("%s: not malloc-ed ->data (as this function is designed to treat, only)", __FUNCTION__);
 
-   
+
    switch (type) {
       /* fixme:   date ?? timestamp */
-      
+
    case db_thang_type_boolean:
       Scm_Warn("%s: type_boolean is implemented poorly!", __FUNCTION__);
       if (t->data)              /* fixme! t->data[0] = 'f' ?? */
@@ -605,7 +606,7 @@ convert_thang_to_scheme(DBT* t, int type)
       /* if (t->size > 8192) */
 
       /* This is very dumb! */
-      char* a = (char*) alloca(t->size +1); 
+      char* a = (char*) alloca(t->size +1);
       memcpy(a, t->data,t->size);
       a[t->size] = 0;
       return Scm_ReadFromCString(a);
@@ -637,7 +638,7 @@ convert_thang_to_scheme(DBT* t, int type)
       /* This would of course be very wrong!  here*/
       if (t->size > 0)
          GC_free(t->data);
-#endif 
+#endif
       break;
 
 
@@ -645,7 +646,7 @@ convert_thang_to_scheme(DBT* t, int type)
       if (t->data)
          {
             k = Scm_MakeInteger(* (int*)t->data);
-            
+
 #if 1                           /* This is a case when we don't need the memory anymore! */
             if (t->flags != DB_DBT_USERMEM)
                my_free(t->data);
@@ -666,7 +667,7 @@ convert_thang_to_scheme(DBT* t, int type)
 }
 
 
-/*  
+/*
  * return either EOF or the value converted.
  */
 ScmObj my_db_get(DB* db, DB_TXN* txnid, ScmObj key, int flags)
@@ -677,7 +678,7 @@ ScmObj my_db_get(DB* db, DB_TXN* txnid, ScmObj key, int flags)
    CHECK_DB(db);
 
    INIT_THANG(data); /* data.flags = DB_DBT_MALLOC;  */
-   
+
 
    /* mmc: this cannot be on the stack:
              might happen to be a pointer to a pre-existing value */
@@ -690,7 +691,7 @@ ScmObj my_db_get(DB* db, DB_TXN* txnid, ScmObj key, int flags)
    result = db->get(db, txnid, key_thang, &data, flags);
 
    dispose_thang(freshly_allocated, key_thang);
-   
+
 
    if (result == DB_NOTFOUND){
       SCM_RETURN(SCM_EOF);
@@ -716,7 +717,7 @@ ScmObj my_db_get(DB* db, DB_TXN* txnid, ScmObj key, int flags)
 
 
 /* New strategy:
- * ~~~~~~~~~~~~~   
+ * ~~~~~~~~~~~~~
  * KEY is either a scm_thang or not.
  * If it is `not', we will create a (C) thang, use it, and destroy it.
  * ->data will be in scheme memory all the time, unless it is a number!
@@ -736,13 +737,13 @@ ScmObj my_db_put(DB* db, DB_TXN* txnid, ScmObj key, ScmObj data, int flags)
 
    int freshly_allocated_data = scheme_2_thang(data, &db_data,
                                                ((ScmDb* )(db->app_private))->value_type);
-   
+
 
    int result = db->put(db, txnid, db_key, db_data, flags);
 
 
    dispose_thang(freshly_allocated_data, db_data);
-   
+
 
    dispose_thang(freshly_allocated_key, db_key);
 
@@ -771,7 +772,7 @@ ScmObj my_db_del(DB* db, DB_TXN* txnid, ScmObj key, int flags)
    int result = db->del(db, txnid, db_key, flags);
 
    dispose_thang(freshly_allocated_key, db_key);
-   
+
 
    /* fixme!  this should throw! */
    if (result){
@@ -814,10 +815,10 @@ new_db_cursor (ScmDb* db_scm, DBC* e)
 
 static void db_cursor_finalize(ScmObj obj, void* data)
 {
-   
+
    DBC* dbc = SCM_DBC(obj);
    ScmDbC* sc = (ScmDbC*) obj;
-   
+
    sc->db = NULL;
    /* sc->value_type  */
 
@@ -848,17 +849,17 @@ ScmObj db_cursor_close(ScmObj cursor)
 
 /* mmc: Why do I keep the converted thangs in the cursor_scm ??   fixme!
 
- 
+
  * KEY, DATA and FLAGS  `act' on the cursor. the result is
  * KEY and DATA updated in some way.  And we return them as 2 values.
- * 
+ *
  */
 ScmObj
 scm_db_cursor_get (ScmDbC* cursor_scm, DBT* key, DBT* data, int flags)
 {
    if ((key->flags == DB_DBT_USERMEM) || (data->flags == DB_DBT_USERMEM))
       Scm_Panic("%s: not malloc-ed ->data", __FUNCTION__);
-   
+
    DBC* cursor  = SCM_DBC(cursor_scm);
    int result = cursor->c_get(cursor, key, data, flags);
    /* fixme:  if  result -> data ? */
@@ -892,7 +893,7 @@ scm_db_cursor_put (ScmObj cursor_scm, ScmObj key, ScmObj data, int flags)
    /* todo: CHECK_DBC(scm_cursor);*/
 
    ScmDbC* cursor_s  =(ScmDbC* ) cursor_scm;
-   
+
 #if 0
    ScmDbC* cursor_scm = ((ScmDbC* )(cursor->app_private));
 #else
@@ -900,13 +901,13 @@ scm_db_cursor_put (ScmObj cursor_scm, ScmObj key, ScmObj data, int flags)
 #endif
    DBT* db_data;
    DBT* db_key;
-   
+
    int freshly_allocated_key = scheme_2_thang(key, &db_key,
                                               cursor_s->key_type);
 
    int freshly_allocated_data = scheme_2_thang(data, &db_data,
                                                cursor_s->key_type);
-   
+
 
    int result = cursor->c_put(cursor, db_key, db_data, flags);
 
@@ -1003,7 +1004,7 @@ void Scm_Init_bdb(void)
    ScmModule *mod;
    SCM_INIT_EXTENSION(bdb);
    mod = SCM_MODULE(SCM_FIND_MODULE("bdb", TRUE)); /* create if necessary*/
-   
+
    {
       int major, minor, patch;
       char* version = db_version(&major, &minor, &patch);
@@ -1014,7 +1015,7 @@ void Scm_Init_bdb(void)
                    version,
                    DB_VERSION_STRING);
    }
-   
+
    internal_init_bdb(mod);
-   
+
 }

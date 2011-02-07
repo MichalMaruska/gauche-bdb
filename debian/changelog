@@ -1,8 +1,14 @@
+gauche-bdb (2.7) maverick; urgency=low
+
+  * maverick (& second attempt to fix)
+
+ -- Michal Maruska <mmaruska@gmail.com>  Tue, 08 Feb 2011 12:40:25 +0100
+
 gauche-bdb (2.6) maverick; urgency=low
 
-  * adapt to gauche 0.9
+  * update to 0.9
 
- -- Michal Maruska <mmaruska@gmail.com>  Tue, 25 Jan 2011 09:03:11 +0100
+ -- Michal Maruska <mmaruska@gmail.com>  Mon, 07 Feb 2011 10:03:39 +0100
 
 gauche-bdb (2.5) lucid; urgency=low
 

@@ -19,9 +19,9 @@ GAUCHE_TOP = @GAUCHE_TOP@
 INSTALL = @INSTALL@
 
 ARCHFILES = bdb.so
-SCMFILES = bdb.scm
+SCMFILES = $(wildcard scm/*.scm)
 HEADERS =
-SCM_HI_FILES = $(wildcard bdb/*scm dbm/*scm) bdb-hi.scm 
+SCM_HI_FILES = $(wildcard bdb/*scm dbm/*scm)
 BINFILES = $(wildcard bin/*.scm)
 
 TARGET = bdb.so
@@ -33,7 +33,7 @@ INSTALL_TYPE = @INSTALL_TYPE@
 HEADER_INSTALL_DIR  = $(DESTDIR)`$(GAUCHE_CONFIG) --$(INSTALL_TYPE)incdir`/
 SCM_INSTALL_DIR     = $(DESTDIR)`$(GAUCHE_CONFIG) --$(INSTALL_TYPE)libdir`/
 ARCH_INSTALL_DIR    = $(DESTDIR)`$(GAUCHE_CONFIG) --$(INSTALL_TYPE)archdir`/
-SCM_HI_INSTALL_DIR =  $(DESTDIR)$$(gauche-config --sitelibdir)
+# SCM_HI_INSTALL_DIR =  $(DESTDIR)$$(gauche-config --sitelibdir)
 BIN_INSTALL_DIR = /usr/bin
 
 all : $(TARGET)
