@@ -1,3 +1,9 @@
+gauche-bdb (2.7.2) maverick; urgency=low
+
+  * fix *scm
+
+ -- Michal Maruska <mmaruska@gmail.com>  Fri, 04 Mar 2011 22:10:59 +0100
+
 gauche-bdb (2.7.1) maverick; urgency=low
 
   * changed the "git & debian" strategy
