@@ -85,7 +85,7 @@ SCM_RETURN(SCM_MAKE_STR_IMMUTABLE(temp)) ;")  ; fixme: better to copy it?
 (define-cproc db-env-create (flags::<int>)
   ;; the bdb library uses arguments/pointers for return values. So these are not `simple'
   ;; functions: so we cannot
-  (return  "mmc_db_env_create"))
+  (call  "mmc_db_env_create"))
 
 
 ;; fixme:  add?
