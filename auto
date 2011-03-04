@@ -1,7 +1,8 @@
+autoreconf --install
+
 export WANT_AUTOCONF_2_5=1
 autoconf  --include `gauche-config --ac` configure.in> configure  
 
-chmod +x  ./configure
-./configure
 
-make
+cp -fv Makefile.in.real Makefile.in
+chmod +x  ./configure
