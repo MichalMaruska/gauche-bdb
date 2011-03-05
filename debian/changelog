@@ -1,3 +1,9 @@
+gauche-bdb (2.7.3) maverick; urgency=low
+
+  * real fix *scm
+
+ -- Michal Maruska <mmaruska@gmail.com>  Sat, 05 Mar 2011 09:26:35 +0100
+
 gauche-bdb (2.7.2) maverick; urgency=low
 
   * fix *scm

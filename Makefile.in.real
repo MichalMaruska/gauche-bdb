@@ -21,7 +21,7 @@ INSTALL = @INSTALL@
 ARCHFILES = bdb.so
 SCMFILES = $(wildcard scm/*.scm)
 HEADERS =
-SCM_HI_FILES = $(wildcard scm/bdb/*scm scm/dbm/*scm)
+SCM_HI_FILES = $(wildcard bdb/*scm dbm/*scm)
 BINFILES = $(wildcard bin/*.scm)
 
 TARGET = bdb.so
