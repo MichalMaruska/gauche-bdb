@@ -2,7 +2,7 @@ dnl
 dnl Configure bdb extension
 dnl  process this file with "autoconf -I `gauche-config --ac`" to
 dnl $Id: configure.in,v 1.3 2003/02/12 22:46:12 mmc Exp $
-AC_INIT(Gauche-bdb, 2.2, michal@ruska.it)
+AC_INIT(Gauche-bdb, 2.2,  mmaruska@gmail.com)
 AC_CANONICAL_SYSTEM
 AC_GAUCHE_INIT_EXT
 

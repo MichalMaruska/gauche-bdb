@@ -53,6 +53,7 @@ test : all
 install : all
 	$(INSTALL) -d $(HEADER_INSTALL_DIR)
 	$(INSTALL) -d $(SCM_INSTALL_DIR)
+	$(INSTALL) -d $(SCM_HI_INSTALL_DIR)
 	$(INSTALL) -d $(ARCH_INSTALL_DIR)
 	$(INSTALL) -D --directory $(DESTDIR)$(BIN_INSTALL_DIR)
 	@for f in $(HEADERS) _end; do \
