@@ -1,3 +1,15 @@
+gauche-bdb (2.7.5) precise; urgency=low
+
+  * recompile for new Gauche.
+
+ -- Michal Maruska <mmaruska@gmail.com>  Mon, 27 Aug 2012 03:55:25 +0200
+
+gauche-bdb (2.7.4) oneiric; urgency=low
+
+  * drop storing fake Makefile.am in Git
+
+ -- Michal Maruska <mmaruska@gmail.com>  Mon, 30 Jan 2012 01:44:14 +0100
+
 gauche-bdb (2.7.3) maverick; urgency=low
 
   * real fix *scm
