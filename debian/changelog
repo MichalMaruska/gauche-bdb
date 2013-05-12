@@ -1,3 +1,10 @@
+gauche-bdb (2.7.7) precise; urgency=low
+
+  * for new 0.9.4 (pre3)
+  * format
+
+ -- Michal Maruska <mmaruska@gmail.com>  Sun, 12 May 2013 18:37:13 +0200
+
 gauche-bdb (2.7.6) precise; urgency=low
 
   * for new 0.9.4 (pre2)
