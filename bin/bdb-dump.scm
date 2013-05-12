@@ -1,6 +1,6 @@
 #! /usr/bin/gosh
 
-;; alternative to  db_dump 
+;; alternative to  db_dump
 ;; fixme:  Try :shared too. Then I have to close the env too!
 (use bdb)
 (use bdb-hi)
@@ -21,11 +21,13 @@
     (let1 remaining
         (parse-options (cdr args)
           (("d|database=s" (db-name)
-                                        ;(logformat "Found!\n")
+	    ;; fixme:  should list databases!
+	    ;;(logformat "Found!\n")
             (set! dbname db-name))
 	   ("h|help" ()
 	    (usage)
 	    (sys-exit 0))))
+
       (when (< (length remaining) 1)
         (usage)
         (sys-exit -1))
