@@ -49,6 +49,10 @@
 
 (define debug #f)
 
+(define (db-error msg)
+  ;; what to do?
+  #f)
+
 
 ;;; `Flags'
 ;;; enclose the logior:  all functions accept flags as a list.
