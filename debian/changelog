@@ -1,3 +1,9 @@
+gauche-bdb (2.8.1) release; urgency=low
+
+  * merge
+
+ -- Michal Maruska <mmaruska@gmail.com>  Mon, 29 Jul 2013 18:20:30 +0200
+
 gauche-bdb (2.8) release; urgency=low
 
   * fix test.scm path
