@@ -48,7 +48,7 @@ bdb-lib.o:  bdb-lib.c  bdb-lib.h
 
 test : all
 	@rm -f test.log
-	$(GOSH) -I. test/test.scm > test.log
+	$(GOSH) -I scm -I . test/test.scm > test.log
 
 install : all
 	$(INSTALL) -d $(HEADER_INSTALL_DIR)
