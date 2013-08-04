@@ -1,5 +1,6 @@
 #! /bin/sh
 
+./gauche-subst-version
 # provide the   Automake related files ... install-sh
 
 # sort of run Automake(1)

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# here we create 1 package.
+
+
+GAUCHE_VERSION=$(gauche-config -V|sed -e 's/_/-/');
+
+# for API in ....
+# do
+sed -e "s/@GAUCHE_VERSION@/${GAUCHE_VERSION}/g" debian/control.in > debian/control
+# done
