@@ -5,8 +5,3 @@
 
 override_dh_gencontrol:
 	dh_gencontrol --dpkg-gencontrol-params=-Dsrcpkg=gauche-bdb
-
-
-override_dh_auto_configure:
-	dh_auto_configure -- --prefix=/usr
-	-$(MAKE) stubs
