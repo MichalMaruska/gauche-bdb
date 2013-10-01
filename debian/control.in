@@ -7,6 +7,6 @@ Standards-Version: 3.7.2
 
 Package: gauche-@GAUCHE_VERSION@-bdb
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, gauche-@GAUCHE_VERSION@, gauche-mmc
+Depends: ${shlibs:Depends}, ${misc:Depends}, gauche-@GAUCHE_VERSION@, gauche-mmc-2
 Provides: gauche-bdb
 Description: binding to Berkeley DB for the Gauche interpreter
