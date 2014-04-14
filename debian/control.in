@@ -10,3 +10,11 @@ Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, gauche-@GAUCHE_VERSION@, gauche-mmc-2
 Provides: gauche-bdb
 Description: binding to Berkeley DB for the Gauche interpreter
+
+
+Package: gauche-bdb
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, gauche-@GAUCHE_VERSION@-bdb
+Provides: gauche-bdb
+Description: Package to provide one candidate of multi-api-version pacæge.
+
