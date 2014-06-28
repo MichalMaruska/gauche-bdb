@@ -1,6 +1,8 @@
 #! /bin/sh
 
-./gauche-subst-version
+
+make -f debian/rules  debian/control
+
 # provide the   Automake related files ... install-sh
 
 # sort of run Automake(1)
