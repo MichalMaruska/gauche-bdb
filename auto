@@ -1,7 +1,11 @@
 #! /bin/sh
 
 
+GAUCHE_VERSION=$(gauche-config -V|sed -e 's/_/-/');
 make -f debian/rules  debian/control
+mv debian/gauche-bdb.install debian/gauche-$GAUCHE_VERSION-bdb.install
+
+
 
 # provide the   Automake related files ... install-sh
 
