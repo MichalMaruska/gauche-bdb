@@ -1,9 +1,11 @@
 #! /bin/sh
 
 
-GAUCHE_VERSION=$(gauche-config -V|sed -e 's/_/-/');
-make -f debian/rules  debian/control
-mv debian/gauche-bdb.install debian/gauche-$GAUCHE_VERSION-bdb.install
+~/repo/gauche/mmc/bin/replace-gauche-string
+
+#GAUCHE_VERSION=$(gauche-config -V|sed -e 's/_/-/');
+#make -f debian/rules  debian/control
+#mv debian/gauche-bdb.install debian/gauche-$GAUCHE_VERSION-bdb.install
 
 
 
