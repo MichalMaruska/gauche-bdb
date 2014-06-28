@@ -4,7 +4,7 @@ BDB_LIB_DIR = -L/usr/lib/
 BDB_HEADER_DIR = -I /usr/include/
 
 # These may be overridden by make invocators
-DESTDIR  = 
+DESTDIR  =
 OPTFLAGS = @OPTFLAGS@
 
 
@@ -18,11 +18,11 @@ GAUCHE_CONFIG = @GAUCHE_CONFIG@
 GAUCHE_TOP = @GAUCHE_TOP@
 INSTALL = @INSTALL@
 
-ARCHFILES = bdb.so
-SCMFILES = $(wildcard scm/*.scm)
+ARCHFILES := bdb.so
+SCMFILES := $(wildcard scm/*.scm)
 HEADERS =
-SCM_HI_FILES = $(wildcard bdb/*scm dbm/*scm)
-BINFILES = $(wildcard bin/*.scm)
+SCM_HI_FILES := $(wildcard bdb/*scm dbm/*scm)
+BINFILES := $(wildcard bin/*.scm)
 
 TARGET = bdb.so
 OBJS = bdb_head.o bdb.o bdb_tail.o bdb-lib.o
