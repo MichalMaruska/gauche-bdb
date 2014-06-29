@@ -39,7 +39,8 @@ BIN_INSTALL_DIR = /usr/bin
 all : $(TARGET)
 
 bdb.so : $(OBJS)
-	$(CC) $(LDFLAGS) bdb.so $(OBJS) $(LIBS)
+	$(CC) $(LDFLAGS) bdb.so $(OBJS) $(BDB_LIBS)
+# $(LIBS)
 
 bdb.c : bdb.stub bdb-lib.h
 	$(GOSH) genstub bdb.stub
