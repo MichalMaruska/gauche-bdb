@@ -13,7 +13,7 @@
 (test-section "low level bdb")
 
 ;; make a directory & DB ENV.  Create a DB, fill in string key/data, & retrieve.
-;; 
+;;
 
 (let1 tmpdir "./tmpdir"
   (format #t "creating a temporary Dir: ~a\n" tmpdir)
@@ -23,7 +23,7 @@
     (slot-set! db-env 'temp tmpdir)
     ;(slot-set! db-env 'data-dir ".")
     (slot-set! db-env 'data-dir ".")
-    
+
     (format #t "env: flags ~d, dir ~a, temp ~a\n"
             (ref db-env 'flags)
             (ref db-env 'data-dir)
@@ -33,7 +33,7 @@
                                 DB_INIT_MPOOL
                                 DB_PRIVATE)
                  0)        ;; 0-> default!
-    
+
     ;; create a DB:
     (let* ((txn null-transaction)
            (db (db-create db-env 0))       ; null-env
@@ -53,8 +53,8 @@
       (db-put db txn "key" 11)
 
       (db-sync db 0)
-      
-      ;; 
+
+      ;;
       (db-del db txn (db-make-thang (string->u8vector "key")) 0)
 
       ;; update?
@@ -64,7 +64,7 @@
 
     (db-env-close db-env 0)
     )
-  
+
   ;(sys-rmdir tmpdir)
   )
 
