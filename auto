@@ -1,9 +1,7 @@
 #! /bin/sh
 
 
-GAUCHE_VERSION=$(gauche-config -V|sed -e 's/_/-/');
-
-replace-gauche-string.pl debian/control.in $GAUCHE_VERSION > debian/control
+replace-gauche-string.pl debian/control.in > debian/control
 
 #GAUCHE_VERSION=$(gauche-config -V|sed -e 's/_/-/');
 #make -f debian/rules  debian/control
