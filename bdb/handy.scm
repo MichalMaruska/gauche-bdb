@@ -7,22 +7,22 @@
    )
   (use bdb)
   (use mmc.simple)
-  ;(use gauche.uvector)
   )
-(select-module bdb.handy)
-  
 
+(select-module bdb.handy)
+
+;;
 (define (db->ndata db)
   (ref (db-btree-stat db 0) 'bt-ndata))
 
-
+;; 
 (define (scan-db db  callback)
   (for-numbers* i 1 (db->ndata db)
     (let1 record (db-get-recnum db null-transaction i)
-                                        ;(fork-event-deserialize
+      ;;(fork-event-deserialize
       ;; u8vector
       (callback record)
-                                        ;(if (ref event 'press)
+      ;;(if (ref event 'press)
       )))
 
 
@@ -32,5 +32,4 @@
            (lambda (record)
              (db-put-recnum to null-transaction 1
                             record ;(db-make-thang record)
-                            DB_APPEND)
-             )))
+                            DB_APPEND))))

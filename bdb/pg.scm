@@ -8,8 +8,7 @@
   (use pg)
   (use pg-hi)
   (use bdb)
-  (use pg.sql)
-;(use gauche.uvector)
+  ;;(use pg.sql)
   )
 (select-module bdb.pg)
 
@@ -21,15 +20,13 @@
 
     ;; assert
     ;; the key & value types match that of the pg result!
-    
     (let* ((result (pg-exec conn query)))
       ;; copy:
-                                        ;(pg-ntuples result)
+      ;;(pg-ntuples result)
       (pg-foreach-result result fields
-        (lambda (key value) 
+        (lambda (key value)
           (db-put db null-transaction
                   key value 0)))
-      ;;
       (db-sync db 0))))
 
 
