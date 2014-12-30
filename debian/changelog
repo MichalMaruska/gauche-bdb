@@ -1,3 +1,26 @@
+gauche-bdb (2.9.0) unstable; urgency=medium
+
+  * bind to fixed Gauche API
+  * Depend on gauche-mmc-2
+  * sq:  migrate to dh
+  * no stubs target!
+  * Provide virtual package to deliver the versioned one.
+  * Generate the debian/control w/ standard tool
+  * Makefile -- use simply-expanded vars.
+  * debug installing
+  * debian/*.install
+  * fixme: dh_install   sourcedir !
+  * Version 2 of the API-bound package creation
+  * first attempt using the perl version
+  * don't need LIBS just BDB_LIBS
+  * adapt to new api replace-gauche-string.pl.
+  * spaces
+  * spaces & format
+  * sq subs
+  * .install files in conflict when only 1 bin package.
+
+ -- Michal Maruska <mmaruska@gmail.com>  Tue, 30 Dec 2014 02:17:54 +0100
+
 gauche-bdb (2.8.1) release; urgency=low
 
   * merge
