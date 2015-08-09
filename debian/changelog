@@ -1,3 +1,9 @@
+gauche-bdb (3.0) gauche-new; urgency=medium
+
+  * cancel the API-versioning
+
+ -- Michal Maruska <mmaruska@gmail.com>  Mon, 10 Aug 2015 00:05:22 +0200
+
 gauche-bdb (2.9.0) unstable; urgency=medium
 
   * bind to fixed Gauche API
