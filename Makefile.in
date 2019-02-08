@@ -25,9 +25,9 @@ SCM_HI_FILES := $(wildcard bdb/*scm dbm/*scm)
 BINFILES := $(wildcard bin/*.scm)
 
 TARGET = bdb.so
-OBJS = bdb_head.o bdb.o bdb_tail.o bdb-lib.o
+OBJS = bdb.o bdb-lib.o
 CONFIG_GENERATED = Makefile config.cache config.log config.status\
-		   autom4te*.cache bdb_head.c bdb_tail.c
+		   autom4te*.cache
 
 INSTALL_TYPE = @INSTALL_TYPE@
 HEADER_INSTALL_DIR  = $(DESTDIR)`$(GAUCHE_CONFIG) --$(INSTALL_TYPE)incdir`/
