@@ -1,3 +1,14 @@
+gauche-bdb (3.1) unstable; urgency=medium
+
+  * drop head/tail
+  * back to  gauche-mmc
+  * compat 13
+  * autoupdate
+  * rename to .ac
+  * don't autoreconf
+
+ -- Michal Maruska <mmaruska@gmail.com>  Sun, 27 Mar 2022 20:09:47 +0200
+
 gauche-bdb (3.0) gauche-new; urgency=medium
 
   * cancel the API-versioning
