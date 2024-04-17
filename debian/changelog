@@ -1,3 +1,14 @@
+gauche-bdb (3.2) unstable; urgency=medium
+
+  * Use cmake, drop autotools, make to install & test
+  * use new way to set debian/compat
+  * build by cmake
+  * build.sh
+  * bin/bdb-dump.scm: format
+  * .gitignore
+
+ -- Michal Maruska <mmaruska@gmail.com>  Wed, 17 Apr 2024 18:41:20 +0200
+
 gauche-bdb (3.1) unstable; urgency=medium
 
   * drop head/tail
