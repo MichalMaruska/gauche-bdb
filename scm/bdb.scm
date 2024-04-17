@@ -11,5 +11,5 @@
   (use gauche.uvector)
   )
 (select-module bdb)
-(dynamic-load "bdb")
+(dynamic-load "libgauche-bdb")
 (provide "bdb")

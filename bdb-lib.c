@@ -999,7 +999,7 @@ compare_prefix(DB *dbp, const DBT* a, const DBT *b)
 /*** Hack for initialization stub */
 void internal_init_bdb(ScmModule*);
 
-void Scm_Init_bdb(void)
+void Scm_Init_libgauche_bdb(void)
 {
    ScmModule *mod;
    SCM_INIT_EXTENSION(bdb);
