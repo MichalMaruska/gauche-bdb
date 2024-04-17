@@ -1,7 +1,24 @@
 #!/usr/bin/make -f
 
 %:
-	dh $@
+	dh $@ --buildsystem=cmake+ninja
+
+# both cmake & make!
+override_dh_auto_test:
+	make test
+
+# so install:
+override_dh_install:
+	# directly, no splitting by .install files:
+	dh_auto_install --destdir=debian/gauche-bdb/ -O--buildsystem=cmake\+ninja
+	make install DESTDIR=debian/gauche-bdb/
+	# dh_auto_install --destdir=debian/gauche-bdb/ -O--buildsystem=cmake\+ninja
+	# dh_install --sourcedir=debian/tmp/
+
+
+# do nothing
+# override_dh_autoreconf:
+
 
 override_dh_gencontrol:
 	dh_gencontrol --dpkg-gencontrol-params=-Dsrcpkg=gauche-bdb
@@ -9,9 +26,3 @@ override_dh_gencontrol:
 #debian/control: debian/control.in
 #	# fix the Package name
 #	replace-gauche-string  debian/control.in > $@
-
-override_dh_install:
-	dh_install --sourcedir=debian/tmp/
-
-# do nothing
-override_dh_autoreconf:

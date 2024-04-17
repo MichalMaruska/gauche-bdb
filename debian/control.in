@@ -2,7 +2,12 @@ Source: gauche-bdb
 Section: interpreters
 Priority: extra
 Maintainer: Michal Maruska <mmaruska@gmail.com>
-Build-Depends: debhelper-compat (= 13), autotools-dev, gauche-dev, libdb-dev, gauche-mmc
+Build-Depends: debhelper-compat (= 13),
+               cmake (>= 3.4),
+               ninja-build,
+               gauche-dev,
+               libdb-dev,
+               gauche-mmc
 Standards-Version: 3.7.2
 
 Package: gauche-bdb
