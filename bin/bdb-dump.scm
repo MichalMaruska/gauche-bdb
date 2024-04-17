@@ -9,8 +9,6 @@
 
 (use gauche.parseopt)
 
-;; bdb-dump.scm -d db file
-
 (define (usage)
   (logformat "usage: ~a [-d dbname] filename \n"
     (sys-basename *program-name*)))
@@ -21,12 +19,12 @@
     (let1 remaining
         (parse-options (cdr args)
           (("d|database=s" (db-name)
-	    ;; fixme:  should list databases!
-	    ;;(logformat "Found!\n")
+            ;; fixme:  should list databases!
+            ;;(logformat "Found!\n")
             (set! dbname db-name))
-	   ("h|help" ()
-	    (usage)
-	    (sys-exit 0))))
+           ("h|help" ()
+            (usage)
+            (sys-exit 0))))
 
       (when (< (length remaining) 1)
         (usage)
@@ -42,7 +40,8 @@
                   :key-type db_thang_type_string
                   :value-type db_thang_type_string)))
 
-        (let ((cursor (db-cursor-create db null-transaction 0))) ;DB_WRITECURSOR DB_READ_COMMITTED
+        (let ((cursor (db-cursor-create db null-transaction 0)))
+                                        ; DB_WRITECURSOR DB_READ_COMMITTED
           (logformat "start\n")
           (receive (k v) (db-cursor-rewind cursor)
             (let step ((key k)
