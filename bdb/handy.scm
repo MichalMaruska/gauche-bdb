@@ -11,11 +11,9 @@
 
 (select-module bdb.handy)
 
-;;
 (define (db->ndata db)
   (ref (db-btree-stat db 0) 'bt-ndata))
 
-;; 
 (define (scan-db db  callback)
   (for-numbers* i 1 (db->ndata db)
     (let1 record (db-get-recnum db null-transaction i)
