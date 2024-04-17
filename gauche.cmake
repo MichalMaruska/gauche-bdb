@@ -67,16 +67,14 @@ message("gauche_moduledir is ${gauche_moduledir} .")
 #  ;(exec gauche-config -I)
 
 
-function(gauche_stub root)
+function(gauche_stub name)
   add_custom_command(
-    OUTPUT ${root}.c
+    OUTPUT ${name}.c
     # CMAKE_CURRENT_BINARY_DIR
-    COMMAND gosh tools/genstub
-    # gosh tools/genstub ../bdb.stub
-    ${CMAKE_CURRENT_SOURCE_DIR}/${root}.stub
-    # ${CMAKE_CURRENT_BINARY_DIR}/${root}.c
+    COMMAND gosh tools/genstub ${CMAKE_CURRENT_SOURCE_DIR}/${name}.stub
+    # ${CMAKE_CURRENT_BINARY_DIR}/${name}.c
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS ${root}.stub
+    DEPENDS ${name}.stub
     # CMAKE_CURRENT_SOURCE_DIR
   )
 endfunction()
