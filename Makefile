@@ -23,7 +23,7 @@ BINFILES := $(wildcard bin/*.scm)
 test :
 	@rm -f test.log
 	@rmdir ./testdir || : ok
-	$(GOSH) -I scm -I . test/test.scm > test.log
+	GAUCHE_DYNLOAD_PATH=./obj-x86_64-linux-gnu/ $(GOSH) -I scm -I . test/test.scm > test.log
 
 install :
 	$(INSTALL) -d $(SCM_INSTALL_DIR)
