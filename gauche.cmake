@@ -68,13 +68,14 @@ message("gauche_moduledir is ${gauche_moduledir} .")
 
 
 function(gauche_stub name)
+  message("generating command to process the ${name}.stub")
+
   add_custom_command(
-    OUTPUT ${name}.c
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${name}.c
     # CMAKE_CURRENT_BINARY_DIR
     COMMAND gosh tools/genstub ${CMAKE_CURRENT_SOURCE_DIR}/${name}.stub
     # ${CMAKE_CURRENT_BINARY_DIR}/${name}.c
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS ${name}.stub
-    # CMAKE_CURRENT_SOURCE_DIR
   )
 endfunction()
